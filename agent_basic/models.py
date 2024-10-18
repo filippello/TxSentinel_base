@@ -8,6 +8,7 @@ class CamelCaseModel(BaseModel):
     )
 
 class TxMessage(CamelCaseModel):
+    type: str = "TxMessage"
     tx_hash: str
     unsigned_tx: dict
 

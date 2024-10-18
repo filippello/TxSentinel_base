@@ -22,7 +22,7 @@ TX_SENTINEL_URI = "ws://localhost:8080/agent/"
 
 async def main():
     tx_sentinel_ws = await websockets.connect(TX_SENTINEL_URI)
-    await tx_sentinel_ws.send(json.dumps({"account": AGENT_ACCOUNT}))
+    await tx_sentinel_ws.send(json.dumps({"type": "AgentSubscribe", "account": AGENT_ACCOUNT}))
 
     try:
         while True:
