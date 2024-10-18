@@ -1,4 +1,6 @@
-import { List, match, Maybe, none } from "./functional/functional"
+import { Instant } from "@js-joda/core"
+import { match, Maybe, none } from "./functional/functional"
+import { List } from "./functional/list"
 import { ServerMessage } from "./model"
 
 export type Reducer<I, S> = (action: I) => (state: S) => S
@@ -23,10 +25,22 @@ export type AppAction =
 
 export namespace AppState {
 
-  export const initial: AppState = {
-    balanceEth: none,
-    warnings: []
-  }
+  const empty: AppState = 
+    ({
+      balanceEth: none,
+      warnings: []
+    })
+
+  const mock: AppState =
+    ({
+      balanceEth: 1,
+      warnings: [
+        {"type":"TxWarning","timestamp":Instant.now(),"txHash":"0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6","agentAddress":"0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6","warningHash":"0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6","message":"Suspicious address"},
+        {"type":"TxWarning","timestamp":Instant.now(),"txHash":"0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6","agentAddress":"0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6","warningHash":"0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bca","message":"Suspicious address"},
+      ]
+    })
+
+  export const initial: AppState = empty
 
 
   export const reducer: Reducer<AppAction, AppState> =
@@ -45,8 +59,9 @@ export namespace AppState {
             TxWarning: message => 
               ({
                 ...state,
-                warnings: state.warnings.some(it => it.txHash === message.txHash) ?
-                  state.warnings.map(it => it.txHash === message.txHash ? message : it) :
+                warnings: 
+                  state.warnings.some(it => it.warningHash === message.warningHash) ?
+                  state.warnings.map(it => it.warningHash === message.warningHash ? message : it) :
                   [...state.warnings, message]
               }),
 
@@ -54,7 +69,6 @@ export namespace AppState {
               ...state,
               warnings: state.warnings.filter(it => it.txHash !== message.txHash)
             }),
-
 
           }),
 

@@ -39,8 +39,10 @@ export const main =
         amountEth: randomEth()
       })()
 
+      const txHash = keccak256(toUtf8Bytes(`tx`))
+
       while(true) {
-        await delayMillis(5 * 1000)()
+        await delayMillis(10 * 1000)()
         
 
         const hash = keccak256(toUtf8Bytes(`${i}`))
@@ -51,16 +53,16 @@ export const main =
           type: "WalletBalance",
           amountEth: randomEth()
         })()
-/*
+
         sendMessage({
           type: "TxWarning",
           timestamp: now,
-          txHash: hash,
+          txHash: txHash,
           agentAddress: hash,
           warningHash: hash,
           message: "Suspicious address"
         })()
-*/
+
         i++
       }
     })

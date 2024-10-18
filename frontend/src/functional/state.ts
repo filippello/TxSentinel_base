@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react"
-import { IO, List, Unit } from "./functional"
+import { useState } from "react"
+import { IO, Unit } from "./functional"
 
 export type State<T> = {
   value: T

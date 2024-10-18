@@ -1,22 +1,34 @@
-import { Instant } from "@js-joda/core"
-import { Value } from "@sinclair/typebox/value"
-import { TInstant } from "../src/model"
+import { pipe } from "../src/functional/functional"
+import { List } from "../src/functional/list"
 
 
-export const main = 
+
+const main = 
   () => {
 
-    const instant = Instant.now()
+    const list = [
+      {
+        a: "asdasd",
+        b: "asdasd"
+      },
+      {
+        a: "asdasd",
+        b: "asdasdsadfasd"
+      },
+      {
+        a: "asd",
+        b: "asdsd"
+      },
+    ]
 
-    const encoded = Value.Encode(TInstant, instant)
+    const grouped = pipe(list)(
+      List.groupByString(it => it.a)
+    )
 
-    console.log(encoded)
-
-    const decoded = Value.Decode(TInstant, encoded)
-
-    console.log(decoded)
+    console.log(grouped)
 
   }
+
 
 main()
 

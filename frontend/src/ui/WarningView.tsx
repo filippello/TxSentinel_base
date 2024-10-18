@@ -1,10 +1,10 @@
 import { FaTriangleExclamation } from "react-icons/fa6"
 import { ServerMessage } from "../model"
-import { Col, Row } from "./Col"
+import { Col, Row } from "./kit/Col"
 import { useEffect, useState } from "react"
 import { Instant } from "@js-joda/core"
 import { IO, Unit } from "../functional/functional"
-import { AppButton } from "./Button"
+import { AppButton } from "./kit/Button"
 
 
 
@@ -48,13 +48,6 @@ export const WarningView = (
     <Col
       className="p-4 gap-2 items-stretch"
     > 
-
-      <div
-        className="text-md text-ellipsis overflow-clip text-"
-      >
-        <b>TxHash:</b> <br/>
-        {props.warning.txHash}
-      </div>
 
       <div
         className="text-md"

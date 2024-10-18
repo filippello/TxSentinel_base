@@ -1,24 +1,24 @@
 import { useAutoAnimate } from "@formkit/auto-animate/react"
 import { BrowserProvider } from "ethers"
 import { useEffect } from "react"
-import { FaArrowRightArrowLeft, FaEthereum } from "react-icons/fa6"
+import { FaEthereum, FaWallet } from "react-icons/fa6"
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { twMerge } from "tailwind-merge"
 import { useAsynchronism } from "./functional/asynchronism"
-import { IO, Maybe, none, Unit } from "./functional/functional"
+import { IO, Maybe, none, pipe, Unit } from "./functional/functional"
+import { List } from "./functional/list"
 import { useIOValue, useStatefull } from "./functional/state"
 import { ServerMessage } from "./model"
 import { notificationShow } from "./notification"
 import { AppAction, AppState } from "./state"
-import { AppButton } from "./ui/Button"
-import { Col, Row } from "./ui/Col"
-import { LoadingIcon } from "./ui/loading"
-import { WarningView } from "./ui/WarningView"
+import { Col, Row } from "./ui/kit/Col"
 import { showIf } from "./util"
 import { websocketConnection } from "./websocket"
 import { browserProvider, toastShow, websocketUrl } from "./window"
-import { FaWallet } from "react-icons/fa6"
+import { InitialView } from "./ui/InitialView"
+import { EmptyView } from "./ui/EmptyView"
+import { TxWarningsView } from "./ui/TxWarningsView"
 
 
 
@@ -54,64 +54,22 @@ export const AppWithProvider = (
 
   const [parent] = useAutoAnimate()
 
+  const warningsByTx = pipe(warnings)(
+    List.groupByString(it => it.txHash),
+    it => Object.entries(it)
+  )
+
+  console.log(warningsByTx)
+
   return (
     <Col
       className="items-stretch justify-start h-screen"
     >
 
-      <Row
-        className="p-4 items-center justify-between border-b border-gray-200 bg-white"
-      >
-        
-        <Col className="w-0 grow items-start">
-        
-          <Row
-            className="items-center justify-center gap-2"
-          >
-
-            <img
-              src="/avalanche.svg"
-              className="h-10 w-10"
-            />
-
-            <div className="text-2xl font-bold">
-              TxSentinel
-            </div>
-
-          </Row>
-
-        </Col>
-
-
-        <Col className="w-0 grow items-center">
-          {
-            balanceEth === none ? none :
-            <Row className="items-center gap-2 font-bold">
-              TxSentinel balance:
-              <Row
-              className="font-mono text-gray-500 text-sm p-2 bg-gray-200 rounded-md items-center gap-2"
-            >
-              <FaEthereum/>
-              {balanceEth.toFixed(10)}
-            </Row>
-            </Row>
-            
-          }
-        </Col>
-
-        <Col className="w-0 grow items-end">
-          {
-            walletAddress === none ? none :
-            <Row
-              className="font-mono text-gray-500 text-sm p-2 bg-gray-200 rounded-md items-center gap-2"
-            >
-              <FaWallet/>
-              {walletAddress}
-            </Row>
-          }
-        </Col>
-
-      </Row>
+      <Header
+        balanceEth={balanceEth}
+        walletAddress={walletAddress}
+      />
 
       {
         connection === none ? (
@@ -121,9 +79,9 @@ export const AppWithProvider = (
             onConnect={connect.run({})}
           />
         ) : (
-        <Row
+        <Col
           ref={parent}
-          className="flex-wrap gap-4 p-4 justify-center items-center grow"
+          className="flex-wrap gap-4 p-4 justify-start items-start grow"
         >
 
           {
@@ -135,26 +93,34 @@ export const AppWithProvider = (
             )
           }
 
-          {warnings.map(it => 
-            <WarningView
-              key={it.warningHash}
-              warning={it}
-              onIgnore={
-                action({
-                  type: "IgnoreWarning",
-                  warningHash: it.warningHash
-                })
-              }
-              onCancel={
-                connection?.send({
-                  type: "TxWarningAccept",
-                  warningHash: it.warningHash
-                })
-              }
-            />)
+          {
+            warningsByTx.map(([txHash, warnings]) =>
+              <TxWarningsView
+                key={txHash}
+                txHash={txHash}
+                warnings={warnings}
+                onTxSend={
+                  connection?.send({
+                    type: "TxAllow",
+                    txHash: txHash
+                  })
+                }
+                onWarningIgnore={warningHash =>
+                  action({
+                    type: "IgnoreWarning",
+                    warningHash: warningHash
+                  })
+                }
+                onWarningCancel={warninghash => 
+                  connection?.send({
+                    type: "TxWarningAccept",
+                    warningHash: warninghash
+                  })
+                }
+              />
+            )
           }
-
-        </Row>
+        </Col>
         )
       }
 
@@ -163,73 +129,70 @@ export const AppWithProvider = (
 }
 
 
-export const InitialView = (
+
+const Header = (
   props: {
-    className?: string
-    loading?: boolean
-    onConnect: IO<Unit>
+    balanceEth: Maybe<number>
+    walletAddress: Maybe<string>
   }
 ) => {
 
-  return <Col 
-    className={
-      twMerge(
-        "p-4 items-center justify-center gap-4",
-        props.className
-      )
-    }
+  return <Row
+    className="p-4 items-center justify-between border-b border-gray-200 bg-white"
   >
-    <div className="text-2xl font-bold">
-      Connect to track transactions
-    </div>
-    <div className="text-gray-500">
-      Connect to your Web3 wallet to see warnings
-    </div>
-    <AppButton
-      className="hover:bg-gray-200 text-xl gap-2"
-      onClick={props.onConnect}
-    >
+    
+    <Col className="w-0 grow items-start">
+    
+      <Row
+        className="items-center justify-center gap-2"
+      >
+
+        <img
+          src="/avalanche.svg"
+          className="h-10 w-10"
+        />
+
+        <div className="text-2xl font-bold">
+          TxSentinel
+        </div>
+
+      </Row>
+
+    </Col>
+
+
+    <Col className="w-0 grow items-center">
       {
-        props.loading ?? false ?
-          <LoadingIcon/> :
-          <FaArrowRightArrowLeft/>
+        props.balanceEth === none ? none :
+        <Row className="items-center gap-2 font-bold">
+          TxSentinel balance:
+          <Row
+          className="font-mono text-gray-500 text-sm p-2 bg-gray-200 rounded-md items-center gap-2"
+        >
+          <FaEthereum/>
+          {props.balanceEth.toFixed(10)}
+        </Row>
+        </Row>
+        
       }
-      Connect
-    </AppButton>
-  </Col>
+    </Col>
+
+    <Col className="w-0 grow items-end">
+      {
+        props.walletAddress === none ? none :
+        <Row
+          className="font-mono text-gray-500 text-sm p-2 bg-gray-200 rounded-md items-center gap-2"
+        >
+          <FaWallet/>
+          {props.walletAddress}
+        </Row>
+      }
+    </Col>
+
+  </Row>
 }
 
 
-export const EmptyView = (
-  props: {
-    className?: string
-    wallet: Maybe<string>
-  }
-) => {
-
-  return <Col 
-    className={
-      twMerge(
-        "p-4 items-center justify-center gap-4",
-        props.className
-      )
-    }
-  >
-    <div className="text-2xl font-bold">
-      Connected! Tracking transactions for
-    </div>
-    <Row className="text-gray-700 font-bold font-mono items-center gap-2">
-      <FaWallet/>
-      {props.wallet ?? "-"}
-    </Row>
-    <div className="text-gray-500">
-      Agents are monitoring your transactions, you'll see warnings here
-    </div>
-    <LoadingIcon
-      className="h-10 w-10"
-    />
-  </Col>
-}
 
 
 export const NoProviderView = (
