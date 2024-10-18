@@ -62,7 +62,6 @@ class TxWarning(ServerMessage):
 class TxDone(ServerMessage):
     type: str = "TxDone"
     tx_hash: str
-    client_balance: int
 
 class ClientMessage(CamelCaseModel):
     @staticmethod
