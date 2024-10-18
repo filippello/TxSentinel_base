@@ -1,0 +1,6 @@
+.env
+.venv
+
+.signed
+
+__pycache__

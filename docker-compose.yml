@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  redis:
+    image: "redis:latest"
+    container_name: redis_server
+    ports:
+      - "6379:6379"
+    networks:
+      - backend_network
+    volumes:
+      - redis_data:/data
+
+  tx_handler:
+    build:
+      context: ./tx_handler
+    container_name: tx_handler
+    depends_on:
+      - redis
+    networks:
+      - backend_network
+    environment:
+      - REDIS_HOST=redis_server
+      - REDIS_PORT=6379
+  
+  bh_basic:
+    build:
+      context: ./bh_basic
+    container_name: bh_basic
+    depends_on:
+      - redis
+    networks:
+      - backend_network
+    environment:
+      - REDIS_HOST=redis_server
+      - REDIS_PORT=6379
+
+  bh_walletnew:
+    build:
+      context: ./bh_walletnew
+    container_name: bh_walletnew
+    depends_on:
+      - redis
+    networks:
+      - backend_network
+    environment:
+      - REDIS_HOST=redis_server
+      - REDIS_PORT=6379
+
+networks:
+  backend_network:
+    driver: bridge
+
+volumes:
+  redis_data:
+
