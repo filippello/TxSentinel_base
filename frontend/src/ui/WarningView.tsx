@@ -50,10 +50,10 @@ export const WarningView = (
     > 
 
       <div
-        className="text-md"
+        className="text-md font-normal"
       >
-        <b>Agent Message:</b> <br/>
-        {props.warning.message}
+        Agent Message: <br/>
+        <b>{props.warning.message}</b>
       </div>
 
       <Row
