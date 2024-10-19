@@ -15,12 +15,13 @@ import { AppAction, AppState } from "./state"
 import { Col, Row } from "./ui/kit/Col"
 import { showIf } from "./util"
 import { websocketConnection } from "./websocket"
-import { browserProvider, toastShow, websocketUrl } from "./window"
+import { browserProvider, ethereum, toastShow } from "./window"
 import { InitialView } from "./ui/InitialView"
 import { EmptyView } from "./ui/EmptyView"
 import { TxWarningsView } from "./ui/TxWarningsView"
 import { AppHeader } from "./ui/AppHeader"
 import { AppContextReact, useBrowserProvider } from "./ui/AppContext"
+import { config } from "./config"
 
 
 
@@ -230,11 +231,16 @@ const trackingStart =
   async () => {
 
     const signer = await provider.getSigner()
+
+    if (config.rpcConfig !== none) {
+      await ethereumChainAdd(config.rpcConfig)()
+    }
+
     const permission = await Notification.requestPermission()
     if (permission !== "granted") throw "Notifications permission denied"
 
     const connection = await websocketConnection({
-      url: websocketUrl,
+      url: config.sentinelUrl,
       onMessage: args.onMessage,
       onClose: event => 
           args.onClose(event.reason === "" ? "Connection error" : event.reason)
@@ -251,3 +257,36 @@ const trackingStart =
     }
   }
 
+
+
+const ethereumChainAdd = 
+  (
+    args: {
+      chainId: string
+      chainName: string
+      nativeCurrency: {
+        name: string
+        symbol: string
+        decimals: number
+      }
+      rpcUrls: List<string>
+      blockExplorerUrls: List<string>
+    }
+  ) => 
+  async () => {
+
+    if (ethereum == none) return
+
+    try {
+
+      await ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [args],
+      })
+
+    } catch (e) {
+      console.error(e)
+      throw e
+    }
+
+  }
