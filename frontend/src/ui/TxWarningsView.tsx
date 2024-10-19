@@ -6,6 +6,8 @@ import { Col, Row } from "./kit/Col"
 import { FaTriangleExclamation } from "react-icons/fa6"
 import { WarningView } from "./WarningView"
 import { AppButton } from "./kit/Button"
+import { State, useStatefull } from "@/functional/state"
+import { AppDialogConfirm } from "./kit/AppDialog"
 
 
 
@@ -18,6 +20,8 @@ export const TxWarningsView = (
     onWarningCancel?: (warningHash: string) => IO<Unit>
   }
 ) => {
+
+  const openSendTxDialog = useStatefull(() => false)
 
   const [parent] = useAutoAnimate()
 
@@ -50,7 +54,7 @@ export const TxWarningsView = (
 
         <AppButton
             className="bg-red-600 hover:bg-red-700 text-white text-lg font-bold"
-            onClick={props.onTxSend}
+            onClick={openSendTxDialog.update(() => true)}
         >
           Ignore All and Send Tx
         </AppButton>
@@ -74,5 +78,17 @@ export const TxWarningsView = (
         }
 
       </Row>
+
+      <AppDialogConfirm
+        open={openSendTxDialog}
+        title="Are you sure you want to send this transaction?"
+        description="This will send the transaction to the network and you will not be able to cancel it."
+        acceptText="Yes, send transaction"
+        onCancel={openSendTxDialog.update(() => false)}
+        onAccept={props.onTxSend}
+      />
+
     </Col>
 }
+
+
