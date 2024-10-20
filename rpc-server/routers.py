@@ -92,7 +92,7 @@ async def handle_agent(ws: WebSocket) -> None:
                     message=am.message,
                     warning_hash=warning_hash
                 )
-                for ws in clients[txs[am.tx_hash].from_account]:
+                for ws in clients.get(txs[am.tx_hash].from_account, []):
                     await ws.send_text(tx_wrn.model_dump_json(by_alias=True))
 
             elif type(am) == ClaimRewards:
@@ -102,6 +102,8 @@ async def handle_agent(ws: WebSocket) -> None:
     except WebSocketDisconnect:
         logger.warning("Websocket disconnected")
         agents[agent_account].remove(ws)
+    except Exception as e:
+        logger.error(f"ERROR HANDLING AGENT: {e}")
 
 
 def withdraw_balance(account: str, amount: int) -> str:
@@ -150,6 +152,11 @@ async def accept_warning(tx_hash: str, warning_hash: str) -> None:
         await ws.send_text(
             WalletBalance(
                 amount_eth=new_balance
+            ).model_dump_json(by_alias=True)
+        )
+        await ws.send_text(
+            TxDone(
+                tx_hash=tx_hash,
             ).model_dump_json(by_alias=True)
         )
 
@@ -232,6 +239,9 @@ async def handle_client(ws: WebSocket) -> None:
     except WebSocketDisconnect:
         logger.warning("Websocket disconnected")
         clients[account].remove(ws)
+    except Exception as e:
+        logger.error(f"ERROR HANDLING CLIENT: {e}")
+
 
 async def process_tx(tx_hash: str, broadcast_time: float) -> tuple[int, str]:
     print("PROCESSING TX")
