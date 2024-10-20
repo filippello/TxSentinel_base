@@ -58,7 +58,10 @@ export const main =
           type: "TxWarning",
           timestamp: now,
           txHash: txHash,
-          agentAddress: hash,
+          agentAddress: 
+            Math.random() < 0.5 ?
+            "0x1CADAdF0e884aC5527Ae596A4fc1017a4fFD4e2C" :
+            "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", // vitalik.eth
           warningHash: hash,
           message: "Suspicious address"
         })()

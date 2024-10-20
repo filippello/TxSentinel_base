@@ -19,29 +19,31 @@ import { browserProvider, toastShow, websocketUrl } from "./window"
 import { InitialView } from "./ui/InitialView"
 import { EmptyView } from "./ui/EmptyView"
 import { TxWarningsView } from "./ui/TxWarningsView"
+import { AppHeader } from "./ui/AppHeader"
+import { AppContextReact, useBrowserProvider } from "./ui/AppContext"
 
 
 
 export const App = () => {
 
-  const providerState = useIOValue<Maybe<BrowserProvider>>(browserProvider)
+  const provider = useIOValue<Maybe<BrowserProvider>>(browserProvider)
 
   return <>
     {
-      providerState === none ? <NoProviderView/> :
-      <AppWithProvider 
-        provider={providerState}
-      />
+      provider === none ? <NoProviderView/> :
+      <AppContextReact.Provider 
+        value={{
+          provider: provider
+        }}
+      >
+        <AppWithProvider/>
+      </AppContextReact.Provider>
     }
     <ToastContainer />
   </>
 }
 
-export const AppWithProvider = (
-  props: {
-    provider: BrowserProvider
-  }
-) => {
+export const AppWithProvider = () => {
 
   const {
     warnings,
@@ -50,7 +52,7 @@ export const AppWithProvider = (
     action,
     connect,
     connection
-  } = useFeatures(props.provider)
+  } = useFeatures()
 
   const [parent] = useAutoAnimate()
 
@@ -59,14 +61,12 @@ export const AppWithProvider = (
     it => Object.entries(it)
   )
 
-  console.log(warningsByTx)
-
   return (
     <Col
       className="items-stretch justify-start h-screen"
     >
 
-      <Header
+      <AppHeader
         balanceEth={balanceEth}
         walletAddress={walletAddress}
       />
@@ -130,68 +130,6 @@ export const AppWithProvider = (
 
 
 
-const Header = (
-  props: {
-    balanceEth: Maybe<number>
-    walletAddress: Maybe<string>
-  }
-) => {
-
-  return <Row
-    className="p-4 items-center justify-between border-b border-gray-200 bg-white"
-  >
-    
-    <Col className="w-0 grow items-start">
-    
-      <Row
-        className="items-center justify-center gap-2"
-      >
-
-        <img
-          src="/avalanche.svg"
-          className="h-10 w-10"
-        />
-
-        <div className="text-2xl font-bold">
-          TxSentinel
-        </div>
-
-      </Row>
-
-    </Col>
-
-
-    <Col className="w-0 grow items-center">
-      {
-        props.balanceEth === none ? none :
-        <Row className="items-center gap-2 font-bold">
-          TxSentinel balance:
-          <Row
-          className="font-mono text-gray-500 text-sm p-2 bg-gray-200 rounded-md items-center gap-2"
-        >
-          <FaEthereum/>
-          {props.balanceEth.toFixed(10)}
-        </Row>
-        </Row>
-        
-      }
-    </Col>
-
-    <Col className="w-0 grow items-end">
-      {
-        props.walletAddress === none ? none :
-        <Row
-          className="font-mono text-gray-500 text-sm p-2 bg-gray-200 rounded-md items-center gap-2"
-        >
-          <FaWallet/>
-          {props.walletAddress}
-        </Row>
-      }
-    </Col>
-
-  </Row>
-}
-
 
 
 
@@ -219,7 +157,9 @@ export const NoProviderView = (
 }
 
 
-const useFeatures = (provider: BrowserProvider) => {
+const useFeatures = () => {
+
+  const provider = useBrowserProvider()
 
   const state = useStatefull<AppState>(() => AppState.initial)
 
@@ -288,6 +228,7 @@ const trackingStart =
     }
   ) =>
   async () => {
+
     const signer = await provider.getSigner()
     const permission = await Notification.requestPermission()
     if (permission !== "granted") throw "Notifications permission denied"
