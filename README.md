@@ -1,4 +1,4 @@
-##¿Qué hace nuestra dApp y cuál es su innovación?
+## ¿Qué hace nuestra dApp y cuál es su innovación?
 
 Nuestra dApp ofrece una capa de protección para los usuarios que interactúan con la blockchain, funcionando como un "firewall" o "antivirus" de las transacciones. El sistema analiza cada transacción antes de que sea confirmada, identificando posibles riesgos, como el envío a contratos inteligentes maliciosos, venta de ntfs fuera de precio, posibles fraudes, etc. Sin embargo, lo que realmente diferencia a nuestra solución es que no somos nosotros quienes directamente analizamos la transacción.
 
