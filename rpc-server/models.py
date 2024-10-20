@@ -1,17 +1,25 @@
 import json
 from datetime import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+
+@dataclass
+class _Warning:
+    warning_hash: str
+    tx_hash: str
+    agent_address: str
+    message: str
 
 @dataclass
 class TxInfo:
     tx_hash: str
     signed_raw_tx: str
     from_account: str
-    tx: dict
-    warnings: list[str]
+    allowed: bool = False
+    warnings: list[_Warning] = field(default_factory=list)
+    accepted_warning: str = ""
 
 class CamelCaseModel(BaseModel):
     model_config = ConfigDict(
@@ -33,13 +41,19 @@ class AgentMessage(CamelCaseModel):
     @staticmethod
     def from_json_str(msg: str):
         data = json.loads(msg)
+        if data["type"] == "AgentSubscribe":
+            return AgentSubscribe(**data)
         if data["type"] == "Warning":
-            return Warning(**data)
+            return AgentWarning(**data)
         if data["type"] == "Claim":
             return ClaimRewards(**data)
         raise ValueError(f"Unknown message type: {data['type']}")
 
-class Warning(AgentMessage):
+class AgentSubscribe(AgentMessage):
+    type: str = "AgentSubscribe"
+    account: str
+
+class AgentWarning(AgentMessage):
     type: str = "Warning"
     tx_hash: str
     message: str
@@ -62,6 +76,10 @@ class TxWarning(ServerMessage):
 class TxDone(ServerMessage):
     type: str = "TxDone"
     tx_hash: str
+
+class WalletBalance(ServerMessage):
+    type: str = "WalletBalance"
+    amount_eth: float
 
 class ClientMessage(CamelCaseModel):
     @staticmethod

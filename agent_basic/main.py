@@ -18,7 +18,7 @@ FORBIDDEN_ACCOUNTS = ["0x1111111111111111111111111111111111111111"]
 
 AGENT_ACCOUNT = "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955"
 
-TX_SENTINEL_URI = "ws://localhost:8080/agent/"
+TX_SENTINEL_URI = "ws://localhost:8089/agent/"
 
 async def main():
     tx_sentinel_ws = await websockets.connect(TX_SENTINEL_URI)

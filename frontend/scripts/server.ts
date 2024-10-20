@@ -10,7 +10,7 @@ export const main =
 
     let i = 0
 
-    const wss = new WebSocketServer({ port: 8080 })
+    const wss = new WebSocketServer({ port: 8089 })
 
     wss.on("connection", async (ws) => {
 
@@ -67,7 +67,7 @@ export const main =
       }
     })
 
-    console.log("Listening on port 8080")
+    console.log("Listening on port 8089")
 
   }
 

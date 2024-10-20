@@ -3,7 +3,7 @@ import { IO, Maybe, none, throws, Unit } from "./functional/functional"
 import { BrowserProvider } from "ethers"
 import { toast, TypeOptions } from "react-toastify"
 
-export const websocketUrl = import.meta.env.VITE_WEBSOCKET_URL ?? "ws://localhost:8080/client/"
+export const websocketUrl = import.meta.env.VITE_WEBSOCKET_URL ?? "ws://localhost:8089/client/"
 
 export const ethereum: Maybe<ethers.Eip1193Provider> = (window as any).ethereum
 

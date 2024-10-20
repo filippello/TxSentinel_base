@@ -1,3 +1,4 @@
+import time
 import json
 import asyncio
 import logging
@@ -8,7 +9,7 @@ from eth_typing import HexStr
 from eth_account import Account
 from eth_account.typed_transactions.typed_transaction import TypedTransaction
 
-from models import RPC, TxWarning, ClientMessage, TxAllow, TxWarningAccept, TxDone, AgentMessage, Warning, ClaimRewards, TxInfo, TxMessage, WalletTrack
+from models import RPC, TxWarning, ClientMessage, TxAllow, TxWarningAccept, TxDone, AgentMessage, AgentWarning, ClaimRewards, TxInfo, TxMessage, WalletTrack, _Warning, WalletBalance, AgentSubscribe
 from w3_client import w3c
 
 logger = logging.getLogger(__name__)
@@ -17,30 +18,91 @@ rpc_router = APIRouter()
 agent_websocket = APIRouter()
 client_websocket = APIRouter()
 
-PAYOUT = 1
+RELEASED_TX = 1
+ACCEPTED_WARNING = 2
+
+PAYOUT = 0.01
 CHAIN_ID = 31337
 AGENTS_TIMEOUT = 5
 CLIENT_TIMEOUT = 20
 CONTRACT_ACCOUNT = "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720"
 CONTRACT_PK = "0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6"
 
-raw_txs: dict[str, str] = {}
+txs: dict[str, TxInfo] = {}
 agents: dict[str, list[WebSocket]] = {}
 clients: dict[str, list[WebSocket]] = {}
-tx_warnings: dict[str, list[TxWarning]] = {}
-balances: dict[str, int] = {
-    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": 100,
-    "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f": 100,
-    "0x976EA74026E726554dB657fA54763abd0C3a0aa9": 100,
+warnings: dict[str, _Warning] = {}
+balances: dict[str, float] = {
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": PAYOUT * 100,
+    "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f": PAYOUT * 100,
+    "0x976EA74026E726554dB657fA54763abd0C3a0aa9": PAYOUT * 100,
+    "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc": PAYOUT * 100,
 }
+print(txs)
 
 class JSONEnc(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, HexBytes):
             return o.hex()
-        # if isinstance(o, Decimal):
-            # return str(o)
         return super().default(o)
+
+@agent_websocket.websocket("/")
+async def handle_agent(ws: WebSocket) -> None:
+    print("AGENT WEBSOCKET")
+    print(txs)
+    await ws.accept()
+    am = AgentMessage.from_json_str(await ws.receive_text())
+    if type(am) != AgentSubscribe:
+        raise HTTPException(
+            status_code=400,
+            detail="Subscription required."
+        )
+    agent_account = am.account
+    if not agent_account in agents:
+        agents[agent_account] = []
+    agents[agent_account].append(ws)
+
+    try:
+        while True:
+            msg = await ws.receive_text()
+            try:
+                am = AgentMessage.from_json_str(msg)
+            except Exception as e:
+                logger.warning(f"ERROR PARSING MESSAGE {msg}: {e}")
+                continue
+            if type(am) == AgentWarning:
+                warning_hash = w3c.keccak(
+                    text=am.tx_hash + agent_account + am.message
+                ).to_0x_hex()
+
+                # store warning
+                _wrn = _Warning(
+                    warning_hash=warning_hash,
+                    tx_hash=am.tx_hash,
+                    agent_address=agent_account,
+                    message=am.message,
+                )
+                warnings[warning_hash] = _wrn
+                txs[am.tx_hash].warnings.append(_wrn)
+
+                # send warning to clients
+                tx_wrn = TxWarning(
+                    agent_address=agent_account,
+                    tx_hash=am.tx_hash,
+                    message=am.message,
+                    warning_hash=warning_hash
+                )
+                for ws in clients[txs[am.tx_hash].from_account]:
+                    await ws.send_text(tx_wrn.model_dump_json(by_alias=True))
+
+            elif type(am) == ClaimRewards:
+                withdraw_balance(agent_account, am.amount)
+            else:
+                raise
+    except WebSocketDisconnect:
+        logger.warning("Websocket disconnected")
+        agents[agent_account].remove(ws)
+
 
 def withdraw_balance(account: str, amount: int) -> str:
     if account not in balances:
@@ -56,7 +118,7 @@ def withdraw_balance(account: str, amount: int) -> str:
         transaction = {
             'from': CONTRACT_ACCOUNT,
             'to': account,
-            'value': amount,
+            'value': int(amount * 10**18),
             'nonce': w3c.eth.get_transaction_count(CONTRACT_ACCOUNT),
             'gas': 200000,
             'maxFeePerGas': 2000000000,
@@ -71,40 +133,73 @@ def withdraw_balance(account: str, amount: int) -> str:
         logger.error(f"ERROR WITHDRAWING BALANCE: {e}")
         return ""
 
-async def reward_agent(from_account: str, agent_account: str) -> int:
+def reward_agent(from_account: str, agent_account: str) -> float:
     balances[from_account] -= PAYOUT
     if agent_account not in balances:
         balances[agent_account] = 0
     balances[agent_account] += PAYOUT
     return balances[from_account]
 
+async def accept_warning(tx_hash: str, warning_hash: str) -> None:
+    new_balance = reward_agent(
+        txs[tx_hash].from_account,
+        warnings[warning_hash].agent_address
+    )
+
+    for ws in clients[txs[tx_hash].from_account]:
+        await ws.send_text(
+            WalletBalance(
+                amount_eth=new_balance
+            ).model_dump_json(by_alias=True)
+        )
+
+    del txs[tx_hash]
+    del warnings[warning_hash]
+
 async def release_tx(tx_hash: str) -> str:
-    if tx_hash not in raw_txs:
-        raise
+    tx_info = txs[tx_hash]
+    signed_raw_tx = HexStr(tx_info.signed_raw_tx)
 
-    signed_raw_tx = HexStr(raw_txs[tx_hash])
+    # inform agents tx was released
+    # for warning in tx_info.warnings:
+    #     for ws in agents[warning.agent_address]:
+    #         try:
+    #             await ws.send_text(
+    #                 TxDone(
+    #                     tx_hash=tx_hash,
+    #                 ).model_dump_json(by_alias=True)
+    #             )
+    #         except Exception as e:
+    #             logger.warning(f"ERROR SENDING TX DONE TO AGENT: {e}")
 
-    # remove warnings
-    for warning in tx_warnings[tx_hash]:
-        for ws in agents[warning.agent_address]:
-            try:
-                await ws.send_text(
-                    TxDone(
-                        tx_hash=tx_hash,
-                    ).model_dump_json(by_alias=True)
-                )
-            except Exception as e:
-                logger.warning(f"ERROR SENDING TX DONE TO AGENT: {e}")
+    # inform client tx was released
+    print(clients)
+    for ws in clients[tx_info.from_account]:
+        await ws.send_text(
+            TxDone(
+                tx_hash=tx_hash,
+            ).model_dump_json(by_alias=True)
+        )
 
-    del tx_warnings[tx_hash]
+    # send tx to blockchain
+    actual_hash = HexBytes(w3c.eth.send_raw_transaction(signed_raw_tx)).to_0x_hex()
 
-    return HexBytes(w3c.eth.send_raw_transaction(signed_raw_tx)).to_0x_hex()
+    txs.pop(tx_hash, None)
+
+    return actual_hash
 
 @client_websocket.websocket("/")
 async def handle_client(ws: WebSocket) -> None:
+    print("CLIENT WEBSOCKET")
+    print(txs)
     await ws.accept()
     wt = ClientMessage.from_json_str(await ws.receive_text())
     assert type(wt) == WalletTrack
+    await ws.send_text(
+        WalletBalance(
+            amount_eth=balances.get(wt.address, 0.0)
+        ).model_dump_json(by_alias=True)
+    )
 
     account = wt.address
     if not account in clients:
@@ -120,44 +215,56 @@ async def handle_client(ws: WebSocket) -> None:
                 logger.warning(f"ERROR PARSING MESSAGE {msg}: {e}")
                 continue
 
-            if type(cm) == WalletTrack:
-                account = cm.address
-                if not account in clients:
-                    clients[account] = []
-                clients[account].append(ws)
+            # if type(cm) == WalletTrack:
+            #     account = cm.address
+            #     if not account in clients:
+            #         clients[account] = []
+            #     clients[account].append(ws)
 
-            # TODO
-            # if type(cm) == TxAllow:
-            #     actual_hash = await release_tx(cm.tx_hash)
-            #     assert actual_hash == cm.tx_hash
-            #     await ws.send_text(
-            #         TxDone(
-            #             tx_hash=actual_hash,
-            #         ).model_dump_json(by_alias=True)
-            #     )
+            if type(cm) == TxAllow:
+                txs[cm.tx_hash].allowed = True
 
             elif type(cm) == TxWarningAccept:
-                dropped_tx, client_balance = await accept_warning(cm.warning_hash)
-                await ws.send_text(
-                    TxDone(
-                        tx_hash=dropped_tx,
-                        client_balance=client_balance
-                    ).model_dump_json(by_alias=True)
-                )
-                # RAISE IS CANCEL TX
-                raise HTTPException(
-                    status_code=410,
-                    detail=f"WARNING ACCEPTED: {cm.warning_hash}"
-                )
+                txs[warnings[cm.warning_hash].tx_hash].accepted_warning = cm.warning_hash
+
             else:
                 raise
     except WebSocketDisconnect:
         logger.warning("Websocket disconnected")
         clients[account].remove(ws)
 
+async def process_tx(tx_hash: str, broadcast_time: float) -> tuple[int, str]:
+    print("PROCESSING TX")
+    print(txs)
+    tx_info = txs[tx_hash]
+
+    while True:
+        if tx_info.allowed:
+            logger.info(f"TX {tx_hash} ALLOWED, RELEASING.")
+            return (RELEASED_TX, await release_tx(tx_hash))
+
+        elapsed = time.time() - broadcast_time
+
+        if (warning_hash := tx_info.accepted_warning):
+            logger.info(f"WARNING {warning_hash} ACCEPTED FOR TX {tx_hash}, CANCELING.")
+            await accept_warning(tx_hash, warning_hash)
+            return (ACCEPTED_WARNING, warning_hash)
+
+        if not tx_info.warnings:
+            if elapsed > AGENTS_TIMEOUT:
+                logger.info(f"NO WARNINGS FOR TX {tx_hash}, RELEASING.")
+                return (RELEASED_TX, await release_tx(tx_hash))
+
+        if elapsed > CLIENT_TIMEOUT:
+            logger.info(f"CLIENT TIMEOUT FOR TX {tx_hash}, RELEASING.")
+            return (RELEASED_TX, await release_tx(tx_hash))
+
+        await asyncio.sleep(0.1)
 
 @rpc_router.post("/")
 async def rpc_handler(rpc: RPC) -> dict:
+    print("RPC HANDLER")
+    print(txs)
     if rpc.method != "eth_sendRawTransaction":
         logger.warning(f"DELEGATING REQUEST TO PROVIDER: {rpc.method}")
         return w3c.provider.make_request(rpc.method, rpc.params)
@@ -195,15 +302,26 @@ async def rpc_handler(rpc: RPC) -> dict:
             except Exception as e:
                 logger.warning(f"ERROR SENDING TX TO AGENT: {e}")
 
-    # wait for agents to emit warnings
-    await asyncio.sleep(AGENTS_TIMEOUT)
+    txs[tx_hash] = TxInfo(
+        tx_hash=tx_hash,
+        signed_raw_tx=rpc.params[0],
+        from_account=from_account,
+    )
 
-    # if no warnings were generated, release the tx
-    if tx_hash not in tx_warnings or not tx_warnings[tx_hash]:
-        logger.info(f"NO WARNINGS FOR TX {tx_hash}, RELEASING.")
-        return {"result": await release_tx(tx_hash), "id": rpc.id, "jsonrpc": "2.0"}
+    try:
+        t, s = await process_tx(tx_hash, broadcast_time=time.time())
+    except Exception as e:
+        logger.error(f"ERROR PROCESSING TX: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error processing transaction."
+        )
 
-    # wait for client to decide on warnings
-    await asyncio.sleep(CLIENT_TIMEOUT)
-
-    return {"result": await release_tx(tx_hash), "id": rpc.id, "jsonrpc": "2.0"}
+    if t == RELEASED_TX:
+        return {"result": s, "id": rpc.id, "jsonrpc": "2.0"}
+    elif t == ACCEPTED_WARNING:
+        raise HTTPException(
+            status_code=410,
+            detail=f"WARNING ACCEPTED: {s}"
+        )
+    raise
