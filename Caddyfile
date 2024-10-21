@@ -1,9 +1,9 @@
-# Redirecting to the rpc-server app
-https://securerpc.filicodelab.xyz {
-    reverse_proxy rpc-server:8089
+# Redirecting to the frontend app
+txsentinel.filicodelab.xyz {
+    reverse_proxy frontend:5173
 }
 
-# Redirecting to the frontend app
-https://txsentinel.filicodelab.xyz {
-    reverse_proxy frontend:5173
+# Redirecting to the rpc-server app
+securerpc.filicodelab.xyz {
+    reverse_proxy rpc-server:8089
 }
