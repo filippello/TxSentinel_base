@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 
 tsconfig.tsbuildinfo
+
+# piton
+.venv
+__pycache__
