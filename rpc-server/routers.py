@@ -33,12 +33,11 @@ agents: dict[str, list[WebSocket]] = {}
 clients: dict[str, list[WebSocket]] = {}
 warnings: dict[str, _Warning] = {}
 balances: dict[str, float] = {
-    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": PAYOUT * 100,
-    "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f": PAYOUT * 100,
-    "0x976EA74026E726554dB657fA54763abd0C3a0aa9": PAYOUT * 100,
-    "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc": PAYOUT * 100,
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": PAYOUT * 1000,
+    "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f": PAYOUT * 1000,
+    "0x976EA74026E726554dB657fA54763abd0C3a0aa9": PAYOUT * 1000,
+    "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc": PAYOUT * 1000,
 }
-print(txs)
 
 class JSONEnc(json.JSONEncoder):
     def default(self, o):
@@ -48,8 +47,6 @@ class JSONEnc(json.JSONEncoder):
 
 @agent_websocket.websocket("/")
 async def handle_agent(ws: WebSocket) -> None:
-    print("AGENT WEBSOCKET")
-    print(txs)
     await ws.accept()
     am = AgentMessage.from_json_str(await ws.receive_text())
     if type(am) != AgentSubscribe:
@@ -180,7 +177,6 @@ async def release_tx(tx_hash: str) -> str:
     #             logger.warning(f"ERROR SENDING TX DONE TO AGENT: {e}")
 
     # inform client tx was released
-    print(clients)
     for ws in clients[tx_info.from_account]:
         await ws.send_text(
             TxDone(
@@ -197,14 +193,14 @@ async def release_tx(tx_hash: str) -> str:
 
 @client_websocket.websocket("/")
 async def handle_client(ws: WebSocket) -> None:
-    print("CLIENT WEBSOCKET")
-    print(txs)
     await ws.accept()
     wt = ClientMessage.from_json_str(await ws.receive_text())
     assert type(wt) == WalletTrack
+    if not wt.address in balances:
+        balances[wt.address] = PAYOUT * 1000
     await ws.send_text(
         WalletBalance(
-            amount_eth=balances.get(wt.address, 0.0)
+            amount_eth=balances[wt.address]
         ).model_dump_json(by_alias=True)
     )
 
@@ -244,8 +240,6 @@ async def handle_client(ws: WebSocket) -> None:
 
 
 async def process_tx(tx_hash: str, broadcast_time: float) -> tuple[int, str]:
-    print("PROCESSING TX")
-    print(txs)
     tx_info = txs[tx_hash]
 
     while True:
@@ -273,8 +267,6 @@ async def process_tx(tx_hash: str, broadcast_time: float) -> tuple[int, str]:
 
 @rpc_router.post("/")
 async def rpc_handler(rpc: RPC) -> dict:
-    print("RPC HANDLER")
-    print(txs)
     if rpc.method != "eth_sendRawTransaction":
         logger.warning(f"DELEGATING REQUEST TO PROVIDER: {rpc.method}")
         return w3c.provider.make_request(rpc.method, rpc.params)
