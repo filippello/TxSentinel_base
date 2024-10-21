@@ -1,6 +1,7 @@
 # Redirecting to the frontend app
 txsentinel.filicodelab.xyz {
-    reverse_proxy frontend:5173
+    file_server
+    root * /var/www
 }
 
 # Redirecting to the rpc-server app

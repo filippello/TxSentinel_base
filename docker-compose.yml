@@ -10,6 +10,7 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./frontend/dist:/var/www
       - caddy_data:/data
       - caddy_config:/config
 
@@ -23,13 +24,13 @@ services:
       - "8089"
 
   # FastAPI Frontend
-  frontend:
-    build:
-      context: ./frontend
-    container_name: frontend
-    restart: unless-stopped
-    expose:
-      - "5173"
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #   container_name: frontend
+  #   restart: unless-stopped
+  #   expose:
+  #     - "5173"
 
 volumes:
   caddy_data:
