@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev-remote": "VITE_WEBSOCKET_URL=ws://securerpc.filicodelab.xyz:8089/client/ vite",
     "typecheck": "tsc --noEmit",
-    "build": "tsc -b && vite build",
+    "build": "VITE_WEBSOCKET_URL=ws://securerpc.filicodelab.xyz:8089/client/ tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
