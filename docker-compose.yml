@@ -1,56 +1,36 @@
 version: '3.8'
 
 services:
-  redis:
-    image: "redis:latest"
-    container_name: redis_server
+  # Caddy reverse proxy
+  caddy:
+    image: caddy:latest
+    restart: unless-stopped
     ports:
-      - "6379:6379"
-    networks:
-      - backend_network
+      - "80:80"
+      - "443:443"
     volumes:
-      - redis_data:/data
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
 
-  tx_handler:
+  # FastAPI RPC Server
+  rpc-server:
     build:
-      context: ./tx_handler
-    container_name: tx_handler
-    depends_on:
-      - redis
-    networks:
-      - backend_network
-    environment:
-      - REDIS_HOST=redis_server
-      - REDIS_PORT=6379
-  
-  bh_basic:
-    build:
-      context: ./bh_basic
-    container_name: bh_basic
-    depends_on:
-      - redis
-    networks:
-      - backend_network
-    environment:
-      - REDIS_HOST=redis_server
-      - REDIS_PORT=6379
+      context: ./rpc-server
+    container_name: rpc-server
+    restart: unless-stopped
+    expose:
+      - "8089"
 
-  bh_walletnew:
+  # FastAPI Frontend
+  frontend:
     build:
-      context: ./bh_walletnew
-    container_name: bh_walletnew
-    depends_on:
-      - redis
-    networks:
-      - backend_network
-    environment:
-      - REDIS_HOST=redis_server
-      - REDIS_PORT=6379
-
-networks:
-  backend_network:
-    driver: bridge
+      context: ./frontend
+    container_name: frontend
+    restart: unless-stopped
+    expose:
+      - "5173"
 
 volumes:
-  redis_data:
-
+  caddy_data:
+  caddy_config:
