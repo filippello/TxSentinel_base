@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 FORBIDDEN_ACCOUNTS = ["0x1111111111111111111111111111111111111111"]
 
-AGENT_ACCOUNT = "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955"
+AGENT_ACCOUNT = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
 
-TX_SENTINEL_URI = "ws://localhost:8089/agent/"
+TX_SENTINEL_URI = "wss://securerpc.filicodelab.xyz/agent/"
 
 async def main():
     tx_sentinel_ws = await websockets.connect(TX_SENTINEL_URI)
