@@ -269,7 +269,7 @@ async def process_tx(tx_hash: str, broadcast_time: float) -> tuple[int, str]:
 async def rpc_handler(rpc: RPC) -> dict:
     if rpc.method != "eth_sendRawTransaction":
         logger.warning(f"DELEGATING REQUEST TO PROVIDER: {rpc.method}")
-        return w3c.provider.make_request(rpc.method, rpc.params)
+        return w3c.provider.make_request(rpc.method, rpc.params) # type: ignore
 
     tx = TypedTransaction.from_bytes(
         HexBytes(rpc.params[0])
@@ -292,6 +292,13 @@ async def rpc_handler(rpc: RPC) -> dict:
     del tx["v"]
     del tx["r"]
     del tx["s"]
+
+    print(tx)
+
+    raise HTTPException(
+        status_code=410,
+        detail="Transaction requires approval."
+    )
 
     for agent in agents:
         for ws in agents[agent]:
