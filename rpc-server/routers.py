@@ -276,6 +276,7 @@ async def rpc_handler(rpc: RPC) -> dict:
     ).as_dict()
 
     from_account = Account.recover_transaction(rpc.params[0])
+    tx["from"] = from_account
 
     if balances.get(from_account, 0) < PAYOUT:
         raise HTTPException(
