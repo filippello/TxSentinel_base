@@ -43,9 +43,17 @@ class JSONEnc(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, HexBytes):
             return o.to_0x_hex()
-        if isinstance(o, int):
-            return hex(o)
         return super().default(o)
+
+    def encode(self, o):
+        if isinstance(o, dict):
+            return super().encode({
+                k: hex(v) if isinstance(v, int) else v
+                for k, v in o.items()
+            })
+        elif isinstance(o, int):
+            return hex(o)
+        return super().encode(o)
 
 @agent_websocket.websocket("/")
 async def handle_agent(ws: WebSocket) -> None:
