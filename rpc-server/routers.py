@@ -43,6 +43,8 @@ class JSONEnc(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, HexBytes):
             return o.to_0x_hex()
+        if isinstance(o, int):
+            return hex(o)
         return super().default(o)
 
 @agent_websocket.websocket("/")
