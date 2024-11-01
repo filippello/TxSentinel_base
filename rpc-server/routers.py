@@ -42,7 +42,7 @@ balances: dict[str, float] = {
 class JSONEnc(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, HexBytes):
-            return o.hex()
+            return o.to_0x_hex()
         return super().default(o)
 
 @agent_websocket.websocket("/")
