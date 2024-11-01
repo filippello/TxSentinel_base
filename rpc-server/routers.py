@@ -295,11 +295,6 @@ async def rpc_handler(rpc: RPC) -> dict:
 
     print(tx)
 
-    raise HTTPException(
-        status_code=410,
-        detail="Transaction requires approval."
-    )
-
     for agent in agents:
         for ws in agents[agent]:
             try:
@@ -327,6 +322,11 @@ async def rpc_handler(rpc: RPC) -> dict:
             detail="Error processing transaction."
         )
 
+
+    raise HTTPException(
+        status_code=410,
+        detail="Transaction requires approval."
+    )
     if t == RELEASED_TX:
         return {"result": s, "id": rpc.id, "jsonrpc": "2.0"}
     elif t == ACCEPTED_WARNING:
