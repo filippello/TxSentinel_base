@@ -3,10 +3,11 @@ import { ServerMessage } from "../model"
 import { Col, Row } from "./kit/Col"
 import { useEffect, useState } from "react"
 import { Instant } from "@js-joda/core"
-import { IO, Unit } from "../functional/functional"
+import { IO, none, Unit } from "../functional/functional"
 import { AppButton } from "./kit/Button"
 import { useEnsLookup } from "@/hooks"
 import Markdown from 'react-markdown'
+import { AppMarkdown } from "./kit/AppMarkdown"
 
 
 export const WarningView = (
@@ -18,8 +19,6 @@ export const WarningView = (
 ) => {
 
   const now = useNow()
-
-  const agentName = useEnsLookup(props.warning.agentAddress)
 
   return <Col
     className="items-stretch rounded-xl overflow-clip border w-full max-w-96"
@@ -53,34 +52,26 @@ export const WarningView = (
     > 
 
       <div
-        className="text-md font-normal"
+        className="text-md"
       >
         From Agent: <br/>
       </div>
 
-      <div
-        className="font-mono text-gray-500 p-2 bg-gray-200 rounded-md items-center gap-2 overflow-ellipsis overflow-hidden max-w-full"
-      >
-        {agentName}
-      </div>
+      <AgentView
+        agentAddress={props.warning.agentAddress}
+      />
 
       <Col>
         <div className="text-md font-normal">
           Message:
         </div>
-        <Markdown
-          className="prose"
-          components={{
-            link: ({ href, children }) => 
-              <a href={href} target="_blank" rel="noreferrer">{children}</a>
-          }}
-        >
+        <AppMarkdown>
           {props.warning.message}
-        </Markdown>
+        </AppMarkdown>
       </Col>
 
       <Row
-        className="flex flex-row justify-evenly py-2 self-stretch"
+        className="flex flex-row justify-evenly py-2 self-stretch font-bold"
       >
         <AppButton
           className="bg-gray-50 hover:bg-gray-100 text-gray-900"
@@ -103,6 +94,41 @@ export const WarningView = (
 
   </Col>
 }
+
+
+
+const AgentView = (
+  props: {
+    agentAddress: string
+  }
+) => {
+
+  const agentAddress = props.agentAddress
+
+  const avatar = useEnsLookup(agentAddress)
+
+  return avatar !== none ?
+    <Row
+      className="items-center gap-2"
+    >
+      <img
+        src={avatar.avatarUrl}
+        className="h-10 w-10 rounded-full"
+      />
+      <div
+        className="text-lg font-bold text-gray-900 p-2 overflow-ellipsis overflow-hidden max-w-full "
+      >
+        {avatar.name}
+      </div>
+    </Row> :
+    <div
+      className="font-mono font-bold text-gray-500 p-2 bg-gray-200 rounded-md overflow-ellipsis overflow-hidden max-w-full"
+    >
+      {agentAddress}
+    </div>
+  
+}
+
 
 const useNow = () => {
   const [now, setNow] = useState(() => Instant.now())

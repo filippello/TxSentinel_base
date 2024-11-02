@@ -21,6 +21,7 @@ import { TxWarningsView } from "./ui/TxWarningsView"
 import { showIf } from "./util"
 import { websocketConnection } from "./websocket"
 import { browserProvider, ethereum, toastShow } from "./window"
+import { Instant } from "@js-joda/core"
 
 
 export const App = () => {

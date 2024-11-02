@@ -63,7 +63,7 @@ export const TxWarningsView = (
 
       <Row
         ref={parent} 
-        className="justify-center gap-2 font-bold flex-wrap"
+        className="justify-center gap-2 flex-wrap"
       >
 
         {
