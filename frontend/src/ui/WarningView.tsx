@@ -56,7 +56,6 @@ export const WarningView = (
         className="text-md font-normal"
       >
         From Agent: <br/>
-        
       </div>
 
       <div
@@ -71,6 +70,10 @@ export const WarningView = (
         </div>
         <Markdown
           className="prose"
+          components={{
+            link: ({ href, children }) => 
+              <a href={href} target="_blank" rel="noreferrer">{children}</a>
+          }}
         >
           {props.warning.message}
         </Markdown>
