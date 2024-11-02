@@ -1,0 +1,15 @@
+{
+  "name": "agent_odos",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bn.js": "^5.1.6",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "bn.js": "^5.2.1"
+  }
+}
