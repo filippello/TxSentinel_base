@@ -107,7 +107,7 @@ export const WarningView = (
       title="Cancel the Tx and open the link?"
       description={
         props.warning.agentAddress === novesOdosBot ?
-        "This will cancel the transaction and open the link in a new tab. The cancellation cost will be covered by the Noves Odos Bot." :
+        "The cancellation cost will be covered by the Noves Odos Bot." :
         "This will cancel the transaction and open the link in a new tab."
       }
       rejectText="Close"

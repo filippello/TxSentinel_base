@@ -9,7 +9,8 @@
     "dev-polygon": "VITE_ENV=polygon vite",
     "typecheck": "tsc --noEmit",
     "build": "VITE_ENV=polygon tsc -b && VITE_ENV=polygon vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "@formkit/auto-animate": "^0.8.2",
