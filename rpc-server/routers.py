@@ -195,7 +195,9 @@ async def release_tx(tx_hash: str) -> str:
         )
 
     # send tx to blockchain
-    actual_hash = HexBytes(w3c.eth.send_raw_transaction(signed_raw_tx)).to_0x_hex()
+    actual_hash = HexBytes(
+        w3c.provider.make_request("qn_broadcastRawTransaction", [signed_raw_tx])["result"]
+    ).to_0x_hex()
 
     txs.pop(tx_hash, None)
 
@@ -331,12 +333,6 @@ async def rpc_handler(rpc: RPC) -> dict:
             status_code=500,
             detail="Error processing transaction."
         )
-
-
-    raise HTTPException(
-        status_code=410,
-        detail="Transaction requires approval."
-    )
     if t == RELEASED_TX:
         return {"result": s, "id": rpc.id, "jsonrpc": "2.0"}
     elif t == ACCEPTED_WARNING:
