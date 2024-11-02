@@ -8,7 +8,7 @@
     "dev-sepolia": "VITE_ENV=sepolia vite",
     "dev-polygon": "VITE_ENV=polygon vite",
     "typecheck": "tsc --noEmit",
-    "build": "VITE_ENV=polygon tsc -b && VITE_ENV=sepolia vite build",
+    "build": "VITE_ENV=polygon tsc -b && VITE_ENV=polygon vite build",
     "preview": "vite preview"
   },
   "dependencies": {
