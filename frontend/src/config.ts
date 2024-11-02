@@ -38,7 +38,29 @@ export const sepoliaConfig: Config = {
   }
 }
 
+export const polygonConfig: Config = {
+  sentinelUrl: "wss://securerpc.filicodelab.xyz/client/",
+  rpcConfig: {
+    chainId: "0x89",
+    chainName: "TxSentinel Polygon",
+    nativeCurrency: {
+      name: "POLYGON",
+      symbol: "POL",
+      decimals: 18,
+    },
+    rpcUrls: [
+      "https://securerpc.filicodelab.xyz/"
+    ],
+    blockExplorerUrls: [
+      "https://polygonscan.com/"
+    ],
+  }
+}
+
+const env = import.meta.env.VITE_ENV
+
 export const config: Config = 
-  import.meta.env.VITE_ENV === "sepolia" ? sepoliaConfig :
+  env === "polygon" ? polygonConfig :
+  env === "sepolia" ? sepoliaConfig :
   localConfig
 

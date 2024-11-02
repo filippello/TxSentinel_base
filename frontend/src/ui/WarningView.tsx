@@ -5,9 +5,8 @@ import { useEffect, useState } from "react"
 import { Instant } from "@js-joda/core"
 import { IO, Unit } from "../functional/functional"
 import { AppButton } from "./kit/Button"
-import { BrowserProvider } from "ethers"
 import { useEnsLookup } from "@/hooks"
-
+import Markdown from 'react-markdown'
 
 
 export const WarningView = (
@@ -66,12 +65,16 @@ export const WarningView = (
         {agentName}
       </div>
 
-      <div
-        className="text-md font-normal"
-      >
-        Message: <br/>
-        <b>{props.warning.message}</b>
-      </div>
+      <Col>
+        <div className="text-md font-normal">
+          Message:
+        </div>
+        <Markdown
+          className="prose"
+        >
+          {props.warning.message}
+        </Markdown>
+      </Col>
 
       <Row
         className="flex flex-row justify-evenly py-2 self-stretch"

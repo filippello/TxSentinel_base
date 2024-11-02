@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "dev-sepolia": "VITE_ENV=sepolia vite",
+    "dev-polygon": "VITE_ENV=polygon vite",
     "typecheck": "tsc --noEmit",
-    "build": "VITE_ENV=sepolia tsc -b && VITE_ENV=sepolia vite build",
+    "build": "VITE_ENV=polygon tsc -b && VITE_ENV=sepolia vite build",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -23,13 +24,16 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.3.0",
+    "react-markdown": "^9.0.1",
     "react-toastify": "^10.0.6",
+    "remark-gfm": "^4.0.0",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "ws": "^8.18.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.11.1",
+    "@tailwindcss/typography": "^0.5.15",
     "@types/react": "^18.3.10",
     "@types/react-dom": "^18.3.0",
     "@types/ws": "^8.5.12",

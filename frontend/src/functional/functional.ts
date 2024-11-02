@@ -8,6 +8,8 @@ export const unit: Unit = undefined
 
 export type Maybe<T> = T | None
 
+export const id = <T>(value: T): T => value
+
 export const throws = (message: string): never => {
   throw new Error(message)
 }
