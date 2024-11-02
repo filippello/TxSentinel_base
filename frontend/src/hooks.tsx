@@ -1,8 +1,6 @@
-import { useAsyncData } from "./functional/AsyncData"
 import { Maybe, none } from "./functional/functional"
-import { useBrowserProvider } from "./ui/AppContext"
 
-const novesOdosBot = "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955"
+export const novesOdosBot = "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955"
 
 type Avatar = {
   avatarUrl?: string

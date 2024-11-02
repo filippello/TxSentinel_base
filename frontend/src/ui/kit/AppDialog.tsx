@@ -11,6 +11,7 @@ export const AppDialogConfirm = (
     title: string
     description: string
     acceptText: string
+    rejectText?: string
     onCancel?: IO<Unit>
     onAccept?: IO<Unit>
   }
@@ -42,7 +43,7 @@ export const AppDialogConfirm = (
           className="bg-gray-50 hover:bg-gray-100 text-gray-900"
           onClick={props.open.update(() => false)}
         >
-          Cancel
+          {props.rejectText ?? "Cancel"}
         </AppButton>
 
         <AppButton

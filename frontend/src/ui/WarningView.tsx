@@ -5,9 +5,10 @@ import { useEffect, useState } from "react"
 import { Instant } from "@js-joda/core"
 import { IO, none, Unit } from "../functional/functional"
 import { AppButton } from "./kit/Button"
-import { useEnsLookup } from "@/hooks"
-import Markdown from 'react-markdown'
+import { novesOdosBot, useEnsLookup } from "@/hooks"
 import { AppMarkdown } from "./kit/AppMarkdown"
+import { AppDialogConfirm } from "./kit/AppDialog"
+import { useStatefull } from "@/functional/state"
 
 
 export const WarningView = (
@@ -19,6 +20,9 @@ export const WarningView = (
 ) => {
 
   const now = useNow()
+
+  const showWarning = useStatefull(() => false)
+  const redirectUrl = useStatefull(() => "")
 
   return <Col
     className="items-stretch rounded-xl overflow-clip border w-full max-w-96"
@@ -65,7 +69,15 @@ export const WarningView = (
         <div className="text-md font-normal">
           Message:
         </div>
-        <AppMarkdown>
+        <AppMarkdown
+          onRedirect={url =>
+            url === none ? IO.noOp :
+            () => {
+              redirectUrl.update(() => url)()
+              showWarning.update(() => true)()
+            }
+          }
+        >
           {props.warning.message}
         </AppMarkdown>
       </Col>
@@ -90,7 +102,25 @@ export const WarningView = (
 
     </Col>
 
-    
+    <AppDialogConfirm
+      open={showWarning}
+      title="Cancel the Tx and open the link?"
+      description={
+        props.warning.agentAddress === novesOdosBot ?
+        "This will cancel the transaction and open the link in a new tab. The cancellation cost will be covered by the Noves Odos Bot." :
+        "This will cancel the transaction and open the link in a new tab."
+      }
+      rejectText="Close"
+      acceptText="Yes, cancel the Tx"
+      onCancel={showWarning.update(() => false)}
+      onAccept={
+        () => {
+          showWarning.update(() => false)()
+          props.onCancel?.()
+          window.open(redirectUrl.value, "_blank")
+        }
+      }
+    />
 
   </Col>
 }
