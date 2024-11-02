@@ -187,7 +187,7 @@ async def release_tx(tx_hash: str) -> str:
     #             logger.warning(f"ERROR SENDING TX DONE TO AGENT: {e}")
 
     # inform client tx was released
-    for ws in clients[tx_info.from_account]:
+    for ws in clients.get(tx_info.from_account, []):
         await ws.send_text(
             TxDone(
                 tx_hash=tx_hash,
@@ -195,8 +195,13 @@ async def release_tx(tx_hash: str) -> str:
         )
 
     # send tx to blockchain
+    # XXX: here we're using the qn_broadcastRawTransaction method
+    # instead of the regular eth_sendRawTransaction method
     actual_hash = HexBytes(
-        w3c.provider.make_request("qn_broadcastRawTransaction", [signed_raw_tx])["result"]
+        w3c.provider.make_request(
+            "qn_broadcastRawTransaction",
+            [signed_raw_tx]
+        )["result"] # type: ignore
     ).to_0x_hex()
 
     txs.pop(tx_hash, None)
