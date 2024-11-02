@@ -343,8 +343,6 @@ async def rpc_handler(rpc: RPC) -> dict:
     del tx["r"]
     del tx["s"]
 
-    print(tx)
-
     for agent in agents:
         for ws in agents[agent]:
             try:
