@@ -1,4 +1,5 @@
 import BN from "bn.js";
+import Web3 from "web3";
 
 const getQuote = async (baseTokenAddress: string, baseTokenAmount: string, targetToken: string, userAddress: string) => {
   const quoteResponse = await fetch("https://api.odos.xyz/sor/quote/v2", {
@@ -27,23 +28,8 @@ const getQuote = async (baseTokenAddress: string, baseTokenAmount: string, targe
   return quoteData;
 };
 
-const assembleQuote = async (pathId: string, userAddress: string) => {
-  const assembleResponse = await fetch("https://api.odos.xyz/sor/assemble", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      "pathId": pathId,
-      "userAddr": userAddress,
-      "simulate": false
-    }),
-  });
-  const response = await assembleResponse.json();
-  console.log("API assemble response:", response);
-  return response;
-};
-
 const novesApiKey = "d5RJLF11LMo6oUaXdt";
-const agentAccount = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+const agentAccount = "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955"
 const wsUrl = "wss://securerpc.filicodelab.xyz/agent/";
 const pingInterval = 10000;
 const ws = new WebSocket(wsUrl);
@@ -122,7 +108,9 @@ ws.onmessage = async (event) => {
     }
 
     const odosAmount = quoteData.outAmounts[0];
-    const isOdosQuoteBetter = new BN(originalAmount).lt(new BN(odosAmount));
+    const diffAmount = new BN(odosAmount).sub(new BN(originalAmount));
+    const isOdosQuoteBetter = diffAmount.gt(new BN(0));
+    const diffAmountString = Web3.utils.fromWei(diffAmount.toString(), targetDecimals);
 
     console.log("Is Odos quote better:", {
       originalAmount,
@@ -134,18 +122,20 @@ ws.onmessage = async (event) => {
       return;
     }
 
-    const assembleResponse = await assembleQuote(quoteData.pathId, userAddress);
-    console.log("Assemble response:", assembleResponse);
+    const tokenSymbol = receivedAction.token.symbol;
 
     ws.send(
       JSON.stringify(
         {
           "type": "Warning",
           "tx_hash": message.txHash,
-          "message": "Try using Odos for a better price.",
-          "transaction": {
-            unsignedTx: assembleResponse.transaction,
-          }
+          "message": `
+**Better swap found**
+
+You could get ${diffAmountString} ${tokenSymbol} more with Odos swap.
+
+[Click here to swap on ODOS](https://app.odos.xyz)
+`,
         }
       )
     );
