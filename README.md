@@ -1,6 +1,6 @@
 ## Noves and ODOS Agent
 
-## inside /agent_odos
+## inside /agent_odos/index.ts
 
 
 
