@@ -22,7 +22,7 @@ export const AppHeader = (
       >
 
         <img
-          src="/base-chain.png"
+          src="/logo.png"
           className="h-10 w-10"
         />
 

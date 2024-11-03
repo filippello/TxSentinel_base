@@ -3,11 +3,12 @@ import { ServerMessage } from "../model"
 import { Col, Row } from "./kit/Col"
 import { useEffect, useState } from "react"
 import { Instant } from "@js-joda/core"
-import { IO, Unit } from "../functional/functional"
+import { IO, none, Unit } from "../functional/functional"
 import { AppButton } from "./kit/Button"
-import { BrowserProvider } from "ethers"
-import { useEnsLookup } from "@/hooks"
-
+import { novesOdosBot, useEnsLookup } from "@/hooks"
+import { AppMarkdown } from "./kit/AppMarkdown"
+import { AppDialogConfirm } from "./kit/AppDialog"
+import { useStatefull } from "@/functional/state"
 
 
 export const WarningView = (
@@ -20,7 +21,8 @@ export const WarningView = (
 
   const now = useNow()
 
-  const agentName = useEnsLookup(props.warning.agentAddress)
+  const showWarning = useStatefull(() => false)
+  const redirectUrl = useStatefull(() => "")
 
   return <Col
     className="items-stretch rounded-xl overflow-clip border w-full max-w-96"
@@ -54,27 +56,34 @@ export const WarningView = (
     > 
 
       <div
-        className="text-md font-normal"
+        className="text-md"
       >
         From Agent: <br/>
-        
       </div>
 
-      <div
-        className="font-mono text-gray-500 p-2 bg-gray-200 rounded-md items-center gap-2 overflow-ellipsis overflow-hidden max-w-full"
-      >
-        {agentName}
-      </div>
+      <AgentView
+        agentAddress={props.warning.agentAddress}
+      />
 
-      <div
-        className="text-md font-normal"
-      >
-        Message: <br/>
-        <b>{props.warning.message}</b>
-      </div>
+      <Col>
+        <div className="text-md font-normal">
+          Message:
+        </div>
+        <AppMarkdown
+          onRedirect={url =>
+            url === none ? IO.noOp :
+            () => {
+              redirectUrl.update(() => url)()
+              showWarning.update(() => true)()
+            }
+          }
+        >
+          {props.warning.message}
+        </AppMarkdown>
+      </Col>
 
       <Row
-        className="flex flex-row justify-evenly py-2 self-stretch"
+        className="flex flex-row justify-evenly py-2 self-stretch font-bold"
       >
         <AppButton
           className="bg-gray-50 hover:bg-gray-100 text-gray-900"
@@ -93,10 +102,63 @@ export const WarningView = (
 
     </Col>
 
-    
+    <AppDialogConfirm
+      open={showWarning}
+      title="Cancel the Tx and open the link?"
+      description={
+        props.warning.agentAddress === novesOdosBot ?
+        "The cancellation cost will be covered by the Noves Odos Bot." :
+        "This will cancel the transaction and open the link in a new tab."
+      }
+      rejectText="Close"
+      acceptText="Yes, cancel the Tx"
+      onCancel={showWarning.update(() => false)}
+      onAccept={
+        () => {
+          showWarning.update(() => false)()
+          props.onCancel?.()
+          window.open(redirectUrl.value, "_blank")
+        }
+      }
+    />
 
   </Col>
 }
+
+
+
+const AgentView = (
+  props: {
+    agentAddress: string
+  }
+) => {
+
+  const agentAddress = props.agentAddress
+
+  const avatar = useEnsLookup(agentAddress)
+
+  return avatar !== none ?
+    <Row
+      className="items-center gap-2"
+    >
+      <img
+        src={avatar.avatarUrl}
+        className="h-10 w-10 rounded-full"
+      />
+      <div
+        className="text-lg font-bold text-gray-900 p-2 overflow-ellipsis overflow-hidden max-w-full "
+      >
+        {avatar.name}
+      </div>
+    </Row> :
+    <div
+      className="font-mono font-bold text-gray-500 p-2 bg-gray-200 rounded-md overflow-ellipsis overflow-hidden max-w-full"
+    >
+      {agentAddress}
+    </div>
+  
+}
+
 
 const useNow = () => {
   const [now, setNow] = useState(() => Instant.now())

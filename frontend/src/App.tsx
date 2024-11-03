@@ -1,10 +1,10 @@
 import { useAutoAnimate } from "@formkit/auto-animate/react"
 import { BrowserProvider } from "ethers"
 import { useEffect } from "react"
-import { FaEthereum, FaWallet } from "react-icons/fa6"
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { twMerge } from "tailwind-merge"
+import { config } from "./config"
 import { useAsynchronism } from "./functional/asynchronism"
 import { IO, Maybe, none, pipe, Unit } from "./functional/functional"
 import { List } from "./functional/list"
@@ -12,17 +12,17 @@ import { useIOValue, useStatefull } from "./functional/state"
 import { ServerMessage } from "./model"
 import { notificationShow } from "./notification"
 import { AppAction, AppState } from "./state"
-import { Col, Row } from "./ui/kit/Col"
+import { AppContextReact, useBrowserProvider } from "./ui/AppContext"
+import { AppHeader } from "./ui/AppHeader"
+import { EmptyView } from "./ui/EmptyView"
+import { InitialView } from "./ui/InitialView"
+import { Col } from "./ui/kit/Col"
+import { TxWarningsView } from "./ui/TxWarningsView"
 import { showIf } from "./util"
 import { websocketConnection } from "./websocket"
 import { browserProvider, ethereum, toastShow } from "./window"
-import { InitialView } from "./ui/InitialView"
-import { EmptyView } from "./ui/EmptyView"
-import { TxWarningsView } from "./ui/TxWarningsView"
-import { AppHeader } from "./ui/AppHeader"
-import { AppContextReact, useBrowserProvider } from "./ui/AppContext"
-import { config } from "./config"
-
+import { Instant } from "@js-joda/core"
+import { novesOdosBot } from "./hooks"
 
 
 export const App = () => {

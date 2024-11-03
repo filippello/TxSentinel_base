@@ -16,7 +16,7 @@ export const AddressView = (
     className="font-mono text-gray-500 text-sm p-2 bg-gray-200 rounded-md items-center gap-2"
   >
     <FaWallet/>
-    {name}
+    {name?.name ?? props.address}
   </Row>
 }
 

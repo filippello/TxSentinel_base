@@ -22,3 +22,10 @@ bun dev
 
 Open http://localhost:5173
 
+# Production build
+
+```
+bun install
+bun clean
+bun run build
+```

@@ -1,11 +1,8 @@
 
-
-
 const main = 
-  () => {
-
+  async () => {
+    
   }
-
 
 main()
 

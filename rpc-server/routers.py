@@ -1,7 +1,9 @@
+import os
 import time
 import json
 import asyncio
 import logging
+import traceback
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from hexbytes import HexBytes
@@ -22,7 +24,7 @@ RELEASED_TX = 1
 ACCEPTED_WARNING = 2
 
 PAYOUT = 0.01
-CHAIN_ID = 31337
+CHAIN_ID = int(os.environ["CHAIN_ID"])
 AGENTS_TIMEOUT = 5
 CLIENT_TIMEOUT = 20
 CONTRACT_ACCOUNT = "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720"
@@ -187,7 +189,7 @@ async def release_tx(tx_hash: str) -> str:
     #             logger.warning(f"ERROR SENDING TX DONE TO AGENT: {e}")
 
     # inform client tx was released
-    for ws in clients[tx_info.from_account]:
+    for ws in clients.get(tx_info.from_account, []):
         await ws.send_text(
             TxDone(
                 tx_hash=tx_hash,
@@ -195,7 +197,14 @@ async def release_tx(tx_hash: str) -> str:
         )
 
     # send tx to blockchain
-    actual_hash = HexBytes(w3c.eth.send_raw_transaction(signed_raw_tx)).to_0x_hex()
+    # XXX: here we're using the qn_broadcastRawTransaction method
+    # instead of the regular eth_sendRawTransaction method
+    actual_hash = HexBytes(
+        w3c.provider.make_request(
+            "qn_broadcastRawTransaction",
+            [signed_raw_tx]
+        )["result"] # type: ignore
+    ).to_0x_hex()
 
     txs.pop(tx_hash, None)
 
@@ -277,9 +286,40 @@ async def process_tx(tx_hash: str, broadcast_time: float) -> tuple[int, str]:
 
 @rpc_router.post("/")
 async def rpc_handler(rpc: RPC) -> dict:
-    if rpc.method != "eth_sendRawTransaction":
-        logger.warning(f"DELEGATING REQUEST TO PROVIDER: {rpc.method}")
+    if rpc.method == "eth_estimateGas":
+        logger.info(f"INTERCEPTING REQUEST: {rpc.method}")
+
+        # XXX: here we use the bn_gasPrice method instead
+        # of relying on the gasPrice from the provider
+        # we use the 95% confidence for now
+
+        gas_price_resp = w3c.provider.make_request(
+            "bn_gasPrice", [{"chainid": CHAIN_ID}]
+        )
+
+        try:
+            gas_price = [
+                it for it in gas_price_resp["result"][ # type: ignore
+                    "blockPrices"
+                ][0]["estimatedPrices"] if it["confidence"] == 95
+            ][0]["price"]
+
+            # replace the gasPrice in the estimateGas request
+            rpc.params[0]["gasPrice"] = hex(int(gas_price * 10**9))
+            logger.info(f"SUCCESSFULLY REPLACED GAS PRICE WITH {rpc.params[0]['gasPrice']}")
+        except:
+            logger.warning(f"FAILED TO GET GAS PRICE: {traceback.format_exc()}")
+
+        resp = w3c.provider.make_request(rpc.method, rpc.params)
+        logger.info(f"RESPONDING WITH: {resp}")
+        return resp # type: ignore
+
+    elif rpc.method != "eth_sendRawTransaction":
+        logger.debug(f"DELEGATING REQUEST TO PROVIDER: {rpc.method}")
         return w3c.provider.make_request(rpc.method, rpc.params) # type: ignore
+
+    # handle eth_sendRawTransaction
+    logger.info(f"INTERCEPTING REQUEST: {rpc.method}")
 
     tx = TypedTransaction.from_bytes(
         HexBytes(rpc.params[0])
@@ -288,11 +328,11 @@ async def rpc_handler(rpc: RPC) -> dict:
     from_account = Account.recover_transaction(rpc.params[0])
     tx["from"] = from_account
 
-    # if balances.get(from_account, 0) < PAYOUT:
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail=f"Insufficient balance for {from_account}."
-    #     )
+    if balances.get(from_account, PAYOUT * 1000) < PAYOUT:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Insufficient balance for {from_account}."
+        )
 
     tx_hash = w3c.keccak(
         HexBytes(rpc.params[0])
@@ -302,8 +342,6 @@ async def rpc_handler(rpc: RPC) -> dict:
     del tx["v"]
     del tx["r"]
     del tx["s"]
-
-    print(tx)
 
     for agent in agents:
         for ws in agents[agent]:
@@ -331,12 +369,6 @@ async def rpc_handler(rpc: RPC) -> dict:
             status_code=500,
             detail="Error processing transaction."
         )
-
-
-    raise HTTPException(
-        status_code=410,
-        detail="Transaction requires approval."
-    )
     if t == RELEASED_TX:
         return {"result": s, "id": rpc.id, "jsonrpc": "2.0"}
     elif t == ACCEPTED_WARNING:
